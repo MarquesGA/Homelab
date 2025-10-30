@@ -1,0 +1,31 @@
+arch: amd64
+cores: 4
+features: nesting=1
+hostname: arr-stack
+memory: 8192
+
+# Montagens de discos (substitua pelos seus caminhos)
+mp0: /caminho/para/midia,mp=/midias-hd
+mp1: /caminho/para/ssd,mp=/mnt/sdd1
+mp2: /caminho/para/series,mp=/series-hd
+mp3: /caminho/para/filmes,mp=/movies-hd
+mp4: /caminho/para/downloads,mp=/data/torrents
+
+# Configuração de rede
+net0: name=eth0,bridge=vmbr0,firewall=1,hwaddr=<MAC_ADDRESS>,ip=<IP_PRIVADO>/24,gw=<GATEWAY>,type=veth
+
+onboot: 1
+ostype: debian
+rootfs: local-lvm:vm-ID-disk-0,size=100G
+startup: order=3,up=10
+swap: 4096
+unprivileged: 1
+
+# Permissões para tun (VPN)
+lxc.cgroup2.devices.allow: c 10:200 rwm
+lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file
+
+# Mapeamento de IDs
+lxc.idmap: u 0 100000 65536
+lxc.idmap: g 0 0 1
+lxc.idmap: g 1 100000 65536

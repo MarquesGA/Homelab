@@ -1,0 +1,92 @@
+version: "3.8"
+
+services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    hostname: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 6881:6881
+      - 6881:6881/udp
+      - 8085:8085 # qbittorrent
+      - 8989:8989 # Sonarr
+      - 9696:9696 # Prowlarr
+      - 7878:7878 # Radarr
+      - 8191:8191 # Flaresolverr
+    volumes:
+      - /caminho/para/docker/gluetun:/gluetun          # ← Substitua pelo caminho real
+    environment:
+      - VPN_SERVICE_PROVIDER=nordvpn                  # ← Não precisa ser NordVPN, mas ajuste as variáveis conforme o provedor
+      - VPN_TYPE=openvpn
+      - OPENVPN_USER=<SEU_USUARIO_NORDVPN_AQUI>       # ← Substitua pelo seu usuário
+      - OPENVPN_PASSWORD=<SUA_SENHA_NORDVPN_AQUI>     # ← Substitua pela sua senha
+      - TZ=America/Sao_Paulo
+      - SERVER_COUNTRIES=Brazil
+      - UPDATER_PERIOD=24h
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent
+    container_name: qbittorrent
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Sao_Paulo
+      - WEBUI_PORT=8085
+      - UMASK_SET=002
+    volumes:
+      - /caminho/para/docker/qbittorrent:/config       # ← Substitua pelo caminho real
+      - /caminho/para/downloads/completos:/data/torrents/completos
+      - /caminho/para/downloads/incompletos:/data/torrents/incompletos
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Sao_Paulo
+      - UMASK_SET=002
+      - DOWNLOAD_CLIENT_FOLDER_PROPAGATION=1
+    volumes:
+      - /caminho/para/docker/sonarr:/config
+      - /caminho/para/downloads/completos:/downloads
+      - /caminho/para/midia/series:/series-hd
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Sao_Paulo
+    volumes:
+      - /caminho/para/docker/prowlarr:/config
+      - /caminho/para/downloads/completos:/downloads
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Sao_Paulo
+      - UMASK_SET=002
+      - DOWNLOAD_CLIENT_FOLDER_PROPAGATION=1
+    volumes:
+      - /caminho/para/docker/radarr:/config
+      - /caminho/para/midia/filmes:/movies-hd
+      - /caminho/para/downloads/comple
