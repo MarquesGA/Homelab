@@ -1,0 +1,45 @@
+arch: amd64
+cores: 2
+features: nesting=1
+hostname: jellyfin
+memory: 8192
+
+# Montagens de volumes, substitua pelos diretórios do seu sistema
+mp1: /caminho/para/filmes,mp=/filmes-hd
+mp2: /caminho/para/series,mp=/series-hd
+
+# Configuração de rede, mantenha ou ajuste conforme sua rede
+net0: name=eth0,bridge=vmbr0,firewall=1,hwaddr=XX:XX:XX:XX:XX:XX,ip=IP_DO_CONTAINER/24,gw=IP_DO_GATEWAY,type=veth
+
+onboot: 1
+ostype: debian
+rootfs: local-lvm:vm-101-disk-0,size=36G
+startup: order=5,up=30
+swap: 4096
+unprivileged: 1
+
+# Dispositivos e permissões para GPU
+lxc.cgroup2.devices.allow: c 226:0 rwm
+lxc.cgroup2.devices.allow: c 226:1 rwm
+lxc.cgroup2.devices.allow: c 226:128 rwm
+lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir
+lxc.mount.entry: /dev/dri/renderD128 dev/renderD128 none bind,optional,create=file
+lxc.cgroup2.devices.allow: c 195:0 rwm
+lxc.cgroup2.devices.allow: c 195:255 rwm
+lxc.cgroup2.devices.allow: c 235:0 rwm
+lxc.cgroup2.devices.allow: c 235:1 rwm
+lxc.cgroup2.devices.allow: c 238:1 rwm
+lxc.cgroup2.devices.allow: c 238:2 rwm
+
+# Dispositivos NVIDIA para passthrough (se aplicável)
+lxc.mount.entry: /dev/nvidia0 dev/nvidia0 none bind,optional,create=file
+lxc.mount.entry: /dev/nvidiactl dev/nvidiactl none bind,optional,create=file
+lxc.mount.entry: /dev/nvidia-uvm dev/nvidia-uvm none bind,optional,create=file
+lxc.mount.entry: /dev/nvidia-uvm-tools dev/nvidia-uvm-tools none bind,optional,create=file
+lxc.mount.entry: /dev/nvidia-caps/nvidia-cap1 dev/nvidia-caps/nvidia-cap1 none bind,optional,create=file
+lxc.mount.entry: /dev/nvidia-caps/nvidia-cap2 dev/nvidia-caps/nvidia-cap2 none bind,optional,create=file
+
+# Mapamento de IDs para usuário não privilegiado
+lxc.idmap: u 0 100000 65536
+lxc.idmap: g 0 0 1
+lxc.idmap: g 1 100000 65536

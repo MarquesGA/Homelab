@@ -1,0 +1,25 @@
+services:
+  caddy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: caddy
+    restart: unless-stopped
+    env_file: 
+      - .env               # ← Crie este arquivo com suas variáveis sensíveis
+    environment:
+      - CLOUDFLARE_EMAIL=${CF_EMAIL}       # ← Substitua pelo seu e-mail Cloudflare no arquivo .env
+      - CLOUDFLARE_API_TOKEN=${CF_API_TOKEN} # ← Substitua pelo seu token Cloudflare no arquivo .env
+      - ACME_AGREE=true
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - caddy-config:/config
+      - caddy-data:/data
+      - local-caddy-config:/etc/caddy    # ← Caminho local opcional para configuração
+      - local-caddy-logs:/var/log/caddy  # ← Diretório local para logs
+
+volumes:
+  caddy-config:
+  caddy-data:

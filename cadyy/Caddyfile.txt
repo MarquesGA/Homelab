@@ -1,0 +1,77 @@
+# ------------- Jellyfin -----------------
+jellyfin.example.com {
+    tls {
+        dns cloudflare {env.CF_API_TOKEN}  # ← Substitua pelo seu token Cloudflare
+        propagation_delay 2m
+        resolvers 1.1.1.1
+    }
+
+    reverse_proxy <JELLYFIN_IP>:8096
+}
+
+# ------------- Stack ARR -----------------
+radarr.example.com {
+    tls { dns cloudflare {env.CF_API_TOKEN} propagation_delay 2m resolvers 1.1.1.1 }
+    reverse_proxy <ARR_IP>:7878
+}
+
+sonarr.example.com {
+    tls { dns cloudflare {env.CF_API_TOKEN} propagation_delay 2m resolvers 1.1.1.1 }
+    reverse_proxy <ARR_IP>:8989
+}
+
+prowlarr.example.com {
+    tls { dns cloudflare {env.CF_API_TOKEN} propagation_delay 2m resolvers 1.1.1.1 }
+    reverse_proxy <ARR_IP>:9696
+}
+
+jellyseerr.example.com {
+    tls { dns cloudflare {env.CF_API_TOKEN} propagation_delay 2m resolvers 1.1.1.1 }
+    reverse_proxy <ARR_IP>:5055
+}
+
+bazarr.example.com {
+    tls { dns cloudflare {env.CF_API_TOKEN} propagation_delay 2m resolvers 1.1.1.1 }
+    reverse_proxy <ARR_IP>:6767
+}
+
+torrent.example.com {
+    tls { dns cloudflare {env.CF_API_TOKEN} propagation_delay 2m resolvers 1.1.1.1 }
+    reverse_proxy <ARR_IP>:8085
+}
+
+# ------------- Proxmox -----------------
+proxmox-admin.example.com {
+    tls { dns cloudflare {env.CF_API_TOKEN} propagation_delay 2m resolvers 1.1.1.1 }
+
+    reverse_proxy https://<PROXMOX_IP>:8006 {
+        transport http {
+            tls
+            tls_insecure_skip_verify
+        }
+    }
+}
+
+# ------------- Immich -----------------
+immich.example.com {
+    tls { dns cloudflare {env.CF_API_TOKEN} propagation_delay 2m resolvers 1.1.1.1 }
+
+    log {
+        format json
+        output file /var/log/caddy/immich.log
+    }
+
+    reverse_proxy <IMMICH_IP>:2283
+}
+
+# ------------- Autenticação -----------------
+auth.example.com {
+    tls { dns cloudflare {env.CF_API_TOKEN} propagation_delay 2m resolvers 1.1.1.1 }
+
+    reverse_proxy https://<AUTH_IP>:9443 {
+        transport http {
+            tls
+            tls_insecure_skip_verify
+        }
+    }
+}

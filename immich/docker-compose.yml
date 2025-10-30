@@ -1,0 +1,56 @@
+name: immich
+
+services:
+  immich-server:
+    container_name: immich_server
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    volumes:
+      - ${UPLOAD_LOCATION}:/data              # ← Substitua pelo caminho dos uploads no seu sistema
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env                                  # ← Crie este arquivo com variáveis sensíveis
+    ports:
+      - '2283:2283'
+    depends_on:
+      - redis
+      - database
+    restart: always
+    healthcheck:
+      disable: false
+
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}-cuda
+    extends:
+      file: hwaccel.ml.yml
+      service: cuda
+    volumes:
+      - model-cache:/cache
+    env_file:
+      - .env
+    restart: always
+    healthcheck:
+      disable: false
+
+  redis:
+    container_name: immich_redis
+    image: docker.io/valkey/valkey:8-bookworm
+    healthcheck:
+      test: redis-cli ping || exit 1
+    restart: always
+
+  database:
+    container_name: immich_postgres
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}       # ← Substitua no .env
+      POSTGRES_USER: ${DB_USERNAME}           # ← Substitua no .env
+      POSTGRES_DB: ${DB_DATABASE_NAME}        # ← Substitua no .env
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - ${DB_DATA_LOCATION}:/var/lib/postgresql/data  # ← Substitua no .env
+    shm_size: 128mb
+    restart: always
+
+volumes:
+  model-cache:
