@@ -1,133 +1,102 @@
-# 🧠 Projeto HomeLab & Raspberry Pi — Gabriel Marques
-
 > **Aviso Legal:**  
 > Este projeto foi criado **exclusivamente para uso pessoal e educacional**.  
 > Não há qualquer intuito comercial, e o autor **não se responsabiliza por qualquer uso indevido** do material aqui descrito.  
 > Todos os dados sensíveis (IPs, tokens, chaves, senhas) foram **intencionalmente ocultados ou substituídos**.
 ___
 > Este projeto foi desenvolvimento durante muitos meses, como hobby, eu não sou especialista na área, apenas uma pessoa curiosa e que gosta de resolver problemas. Todo o projeto foi pensado para ser gratuito ou o mais barato possivel, o gasto feito foi apenas em peças de hardware, um domínio para SSL (Opcional), assinatura da VPN (Opcional mas altamente recomendado) e tempo livre.
-> 
-> O hardware foi comprado usado ou com excelentes descontos, você não precisa de nada parecido para começar, eu iniciei com uma IPX3060E uma placa mãe com processador integrado de 2 cores e 2 Threads de 2016 com 1gb de ram usando CasaOS, gastei 50 reais, e o gabinete era a própria caixa. 
+---
+# Laboratório Avançado de Infraestrutura & Virtualização — Gabriel Marques
+
+Este repositório documenta a arquitetura, os scripts de automação e as decisões de design que sustentam uma infraestrutura híbrida baseada em Proxmox VE e arquitetura ARM. O ambiente foi projetado seguindo padrões de nível de produção para homologar conceitos avançados de virtualização, isolamento de redes, governança de segurança e gerenciamento de DNS recursivo.
 
 ---
 
-### 💾 Hardware Base
+### Metodologia de Engenharia e P&D Autodidata
 
-- **CPU:** AMD Ryzen 5 5600  
-- **RAM:** 32 GB DDR4 (2x16GB 3200)  
-- **Placa-mãe:** MSI A520 A-PRO  
-- **GPU:** RTX 3050 (usada para transcoding e IA no Immich)  
-- **Armazenamento:**  
-  - SSD SanDisk Ultra 3D 500 gb → Sistema + LXC + VMs  
-  - SSD SanDisk 1 TB → Dados do Immich
-  - SSD SanDisk 500 gb → Backup e Snapshots
-  - HDD 4 TB → Biblioteca de mídia do Jellyfin (disco usado)  
-- Raspberry Pi 3 modelo B+
-  - SSD Kingston 120 gb
-  - MicroSD 64gb
+Toda esta infraestrutura foi arquitetada e implantada por meio de uma abordagem de Pesquisa e Desenvolvimento (P&D) **100% autodidata**. Construído integralmente sem cursos formais, treinamentos corporativos ou bootcamps externos, o projeto funciona como um campo de testes prático para engenharia reversa de ambientes complexos, análise de documentações oficiais e domínio de engenharia de sistemas em escala real. 
+
+Este laboratório reflete capacidade autônoma de resolução de problemas, diagnóstico avançado de falhas (troubleshooting) e competência para implementar de forma independente padrões arquiteturais complexos.
 
 ---
 
-## 🎯 Objetivo
+### Visão Geral da Arquitetura & Topologia de Rede
 
-Este projeto nasceu do desejo de aprender e compartilhar conhecimento sobre **Home Labs**, **virtualização**, **automação**, **armazenamento de mídia**, **backup** e **infraestrutura doméstica**.  
-O conteúdo aqui documentado foi pensado especialmente para **falantes de português**, já que a maior parte do material disponível sobre o tema está em **inglês**.
+A infraestrutura é segregada utilizando topologias rígidas de rede virtual gerenciadas por um firewall corporativo pfSense virtualizado. Tarefas de computação de alto desempenho utilizam tradução direta de hardware (GPU passthrough), enquanto os serviços de infraestrutura principal rodam em camadas de virtualização leves e contêineres não privilegiados.
 
-A intenção é **ajudar iniciantes** a compreender o processo de criação de um ambiente funcional com **Proxmox VE**, **containers LXC não privilegiados**, **pfSense virtualizado** e um **Raspberry Pi** usado como nó auxiliar para automações e mídia.
-
----
-
-## 🧩 Estrutura Geral
-
-### 🖥️ HomeLab Proxmox
-
-| Tipo | Nome | Função | Notas |
-|------|------|--------|-------|
-| VM | pfSense | Firewall, VLANs, DHCP e bloqueios IP | 2 vCPUs / 8GB RAM, passthrough de rede WAN |
-| LXC | Jellyfin | Servidor de mídia com aceleração GPU | HDD 4TB exclusivo |
-| LXC | ARR Stack | qBittorrent (Gluetun + NordVPN), Radarr, Sonarr, Prowlarr, Bazarr, Jellyseerr | Jellyseerr integrado com Discord via API |
-| LXC | Immich | Backup e IA para fotos | SSD 1TB dedicado e Servidor de mídia com aceleração GPU |
-| LXC | Tailscale | Acesso remoto seguro | Integração com o sistema para acesso externo |
-| LXC | AdGuard (prod) | DNS filtrado | Adblock, bloqueio de aplicativos e filtros |
-| LXC | AdGuard (testes) | Ambiente de testes | Utilizado para testes como a latência do Unbound, filtros... |
-| LXC | Unbound | DNS recursivo com DNSSEC | Integrado ao AdGuard |
-| LXC | Caddy | Proxy reverso e HTTPS (Cloudflare (Grey cloud) + Certbot) | Utilizo apenas para certificado SSL |
-| LXC | Backup-Server | Snapshots e sincronizações | Scripts automáticos |
-| Outros | Containers auxiliares | Scripts, monitoramento e testes | Use para testes e aprendizado |
+| Tipo de Implantação | Serviço Hospedado | Funcionalidade Core | Notas de Infraestrutura e Arquitetura |
+| :--- | :--- | :--- | :--- |
+| **Máquina Virtual** | pfSense | Roteamento, Firewall, Segmentação de VLANs, DHCP, Bloqueio de IP | Provisionado com passthrough exclusivo de rede WAN; gerencia zonas isoladas. |
+| **Contêiner LXC** | Caddy | Proxy Reverso e Terminação SSL Automatizada na Borda | Integrado ao DNS da Cloudflare (Grey Cloud) via desafios automatizados de API do Certbot. |
+| **Contêiner LXC** | Tailscale | Rede Mesh Privada e Acesso Remoto Seguro | Configuração de encaminhamento zero de portas (Zero-Port-Forwarding) atuando como gateway de ingresso seguro. |
+| **Contêiner LXC** | AdGuard (Prod) | Filtragem de DNS de Nível Corporativo e Bloqueio de Anúncios | Resolução e sumidouro (sinkhole) de DNS integrado nativamente nas VLANs de produção. |
+| **Contêiner LXC** | Unbound | Resolvedor DNS Upstream Recursivo com Validação DNSSEC | Resolvedor recursivo endurecido (hardened) implantado como upstream autoritativo para as camadas AdGuard. |
+| **Contêiner LXC** | Home Assistant | Motor Central de Automação Residencial e IoT | Máquina de estado core gerenciando orquestração multiprotocolo e telemetria interna. |
+| **Contêiner LXC** | Hermes Agent | Agente de Sistema Orientado a Eventos e Daemon de Monitoramento | Agente leve implantado para orquestrar relatórios de estado e fluxos de trabalho automatizados. |
+| **Contêiner LXC** | Immich | Gestão de Ativos por IA e Backup de Fotos Multino | Otimizado com PCIe GPU Passthrough para aceleração de hardware em reconhecimento facial por IA. |
+| **Contêiner LXC** | Jellyfin | Distribuição de Mídia e Motor de Transcoding em Tempo Real | Configurado com drivers de runtime NVIDIA para codificação/decodificação direta via hardware. |
+| **Contêiner LXC** | ARR Stack | Pipelines Automatizados de Ingestão de Mídia | Composto por qBittorrent isolado através de um gateway VPN Gluetun, integrado via APIs de eventos. |
+| **Contêiner LXC** | Backup-Server | Recuperação de Desastres e Ciclo de Vida de Snapshots | Lógica automatizada via crontab executando políticas de rsync e snapshots incrementais locais. |
 
 ---
 
-### 🧠 Arquitetura e Segurança
+### Provisionamento de Hardware e Camada Bare-Metal
 
-- Todos os containers LXC são **unprivileged**, garantindo isolamento e segurança.  
-- O **pfSense** está virtualizado e realiza segmentação via **VLANs**: LAN, Mídia, IoT, Serviços, Testes.  
-- **AdGuard + Unbound**: controle DNS com resolução local, bloqueios por categorias e segurança DNSSEC.  
-- **Caddy** atua como proxy reverso com HTTPS automatizado usando Cloudflare + Certbot.  
-- **Tailscale** oferece acesso remoto privado, sem necessidade de port forwarding (ideal para usuários sob CGNAT).  
-- **Backups automáticos** com scripts e Proxmox Backup Server (PBS).  
+Uma arquitetura equilibrada de computação e armazenamento implantada para obter eficiência energética ideal, sustentando altas cargas de IOPS em múltiplos pools de SSD.
 
----
-## 🍓 Raspberry Pi — Nó Auxiliar
-### 🧩 Objetivo
-O Raspberry Pi (Raspberry Pi 3b+) foi usado inicialmente como plataforma de **testes de boot múltiplo** e aprendizado com **PINN**, evoluindo depois para um ambiente de mídia e automação leve com **DietPi + Kodi** em SSD.
-
-### 🔹 Fase 1 — PINN e experimentação
-- Uso do PINN para instalar e testar múltiplos sistemas (DietPi, LibreELEC, Raspberry Pi OS).  
-- Entendimento de partições, boots múltiplos e comportamento do Pi.  
-- Experimentos de rede e desempenho via microSD.
-
-### 🔹 Fase 2 — Migração para SSD + DietPi
-- Instalação do **DietPi** em SSD USB (melhor performance e durabilidade).  
-- Instalação do **Kodi** como media center conectado à TV via HDMI.  
-- Montagem automática das mídias remotas do Jellyfin via SMB/NFS.  
-- Integração com o tailscale para acesso remoto
-- Integração futura com Home Assistant e Pi-hole (em testes).  
+* **Processamento (CPU):** AMD Ryzen 5 5600 (6 Cores / 12 Threads) em uma placa-mãe MSI A520 A-PRO
+* **Memória RAM:** 32 GB DDR4 (2x16GB 3200 MHz)
+* **Processamento Gráfico e IA (GPU):** NVIDIA RTX 3050 (Dedicada aos pipelines de IA do Immich e transcoding do Jellyfin)
+* **Pools de Armazenamento:**
+  * `Pool-0 (Sistema):` SSD SanDisk Ultra 3D de 500 GB (Proxmox VE OS, armazenamento de VMs e runtimes ativos de LXC)
+  * `Pool-1 (Dados/IA):` SSD SanDisk de 1 TB (Armazenamento dedicado de alta velocidade para processamento do Immich)
+  * `Pool-2 (Backup):` SSD SanDisk de 500 GB (Recuperação de desastres local, snapshots a quente e retenção de estado)
+  * `Pool-3 (Mídia):` HDD Mecânico de 4 TB (Armazenamento em bloco de alta capacidade para bibliotecas de mídia)
 
 ---
 
-## ⚙️ Scripts e Docker Compose
+### Arquitetura de Backup em Nuvem Offsite e Recuperação de Desastres
 
-- Alguns containers foram criados via **docker-compose**, outros diretamente pelo Proxmox LXC.
-- Scripts de instalação e manutenção adaptados de:  
-  🔗 [Community Scripts for Proxmox VE](https://community-scripts.github.io/ProxmoxVE/)  
-- Arquivos `docker-compose.yml` incluem integrações com VPN (Gluetun), automação do ARR Stack, e Immich.  
-- Informações sensíveis foram substituídas por placeholders `<REDACTED_...>`.
+Para garantir conformidade estrita com os padrões de resiliência de dados, a infraestrutura implementa um modelo de backup híbrido que combina o rastreamento de estado local com a replicação externa em nuvem.
 
----
-
-## 🌐 Comunidade e Referências
-
-O projeto foi desenvolvido com base em conhecimento adquirido de múltiplas fontes, incluindo criadores de conteúdo e comunidades técnicas, com muitos meses de estudos e dedicação e bastante IA para o troubleshooting:
-
-### 📺 YouTube
-- [Jim’s Garage](https://www.youtube.com/@Jims-Garage)  
-- [Wolfgang’s Channel](https://www.youtube.com/@WolfgangsChannel)  
-- [Hardware Haven](https://www.youtube.com/@HardwareHaven)  
-- [Techno Tim](https://www.youtube.com/@TechnoTim)  
-- [SauberLab](https://www.youtube.com/@SauberLab)
-
-### 💬 Comunidades e Fóruns
-- [Reddit — GPU passthrough for Jellyfin LXC](https://www.reddit.com/r/Proxmox/comments/1c9ilp7/proxmox_gpu_passthrough_for_jellyfin_lxc_with/)  
-- [StackOverflow](https://stackoverflow.com)  
-- [Proxmox Forums](https://forum.proxmox.com)  
-- [r/homelab](https://www.reddit.com/r/homelab)  
-- [r/selfhosted](https://www.reddit.com/r/selfhosted)
-
-### 📘 Projetos e Documentações Oficiais
-- [Proxmox VE](https://www.proxmox.com/)  
-- [Immich](https://immich.app/)  
-- [DietPi](https://dietpi.com)  
-- [PINN](https://github.com/procount/pinn)  
-- [Jellyfin](https://jellyfin.org)  
-- [Radarr](https://radarr.video) / [Sonarr](https://sonarr.tv) / [Prowlarr](https://prowlarr.com)
+* **Proxmox Backup Server (PBS):** Implantado para gerenciar snapshots automatizados, incrementais, criptografados no lado do cliente e desduplicados de todas as instâncias e volumes virtualizados críticos.
+* **Integração com Google Cloud Storage:** Os pools de backup locais são replicados de forma segura e sincronizados com uma camada fria (cold tier) do Google Cloud Storage. Isso garante alta durabilidade, criptografia de ponta a ponta e isolamento geográfico para cenários completos de recuperação de desastres (Disaster Recovery).
 
 ---
 
-## 🙌 Objetivo Comunitário
+### Nó Secundário Auxiliar: Raspberry Pi
 
-O principal propósito deste projeto é **ampliar o acesso a conteúdo técnico em língua portuguesa**, criando uma ponte entre o conhecimento global (majoritariamente em inglês) e a comunidade lusófona interessada em tecnologia, homelabs e automação.
+Um nó de computação de borda rodando DietPi Linux, implantado em armazenamento externo de estado sólido para garantir alta confiabilidade de leitura/gravação e mitigar a degradação de hardware de cartões micro-SD.
 
-> 💡 Se este repositório te ajudou, considere contribuir com melhorias, traduções ou feedbacks para torná-lo ainda mais útil a outros iniciantes.
+* **Bare Metal:** Raspberry Pi 3 Model B+ configurado para inicialização em um SSD externo Kingston de 120 GB.
+* **Capacidades e Testes Atuais:**
+  * Estação de mídia isolada Kodi executando protocolos de televisão habilitados para CEC via HDMI.
+  * Compartilhamento de arquivos multiprotocolo utilizando montagens de rede seguras (SMB/NFS) interligadas ao pool principal.
+  * Ambiente ativo de testes de cenários de failover para Home Assistant e agrupamento (clustering) de alta disponibilidade do Pi-hole.
+
+---
+
+### Automação & Governança
+
+* Todos os microsserviços são gerenciados e mantidos por meio de manifestos declarativos do Docker Compose ou contêineres Linux nativamente isolados (LXC).
+* As estratégias de implantação são adaptadas de blueprints validados pela comunidade e customizadas para impor limites estritos de segurança de rede.
+* Conformidade de segurança: Todos os segredos internos, tokens, chaves de API e estruturas de roteamento público são estritamente higienizados usando parâmetros de ambiente dinâmicos ou placeholders (`<REDACTED_...>`).
+
+---
+
+### Referências Técnicas & Comunidades
+
+* **Documentação e Ferramentas:** Proxmox VE, Home Assistant, Immich, DietPi, Jellyfin, Radarr, Sonarr, Prowlarr.
+* **Blueprints de Arquitetura:** Proxmox VE Community Scripts, r/homelab, r/selfhosted, Fóruns Oficiais Proxmox.
+
+---
+
+### Conformidade Técnica & Licença
+
+Distribuído sob a licença **MIT**. Aberto para revisão colaborativa, otimizações sistêmicas e forks educacionais.
+
+**Autor:** Gabriel Marques
+*Engenheiro de Plataforma, Automação & Observabilidade*
+
 
 ---
 
