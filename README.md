@@ -103,5 +103,3 @@ Distribuído sob a licença **MIT**. Aberto para revisão colaborativa, otimiza�
 ## 📜 Licença
 
 Distribuído sob a licença **MIT** — uso e modificação livres para fins pessoais e educacionais, mantendo créditos ao autor.
-
-**Autor:** Gabriel Marques 🇧🇷  
